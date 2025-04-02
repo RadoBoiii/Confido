@@ -37,8 +37,8 @@ ConversAI is a modern web application that enables natural voice conversations w
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/RadoBoiii/ConverseAI.git
-   cd ConverseAI
+   git clone https://github.com/RadoBoiii/ConversAI.git
+   cd ConversAI
    ```
 
 2. **Install dependencies:**

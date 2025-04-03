@@ -1,122 +1,156 @@
-# ConversAI - Interactive Voice Chat Application
+# ConversAI - AI-Powered Conversation Simulator
 
-ConversAI is a modern web application that enables natural voice conversations with an AI assistant. It features real-time speech recognition, text-to-speech responses, and a clean, intuitive interface.
-
-## Features
-
-- 🎙️ Real-time voice recording and transcription
-- 🤖 AI-powered conversational responses
-- 🔊 Text-to-speech for AI responses
-- 💬 Text chat interface with typing indicators
-- 🎯 Clean and modern UI built with React and Tailwind CSS
-- 🔒 User authentication system
-- 📝 Conversation history tracking
-
-## Tech Stack
-
-- **Frontend:**
-  - React with TypeScript
-  - Tailwind CSS for styling
-  - Socket.io client for real-time communication
-  - Web Speech API for voice recognition
-
-- **Backend:**
-  - Node.js with Express
-  - MongoDB for data storage
-  - Socket.io for real-time events
-  - OpenAI API for AI responses
-  - Text-to-speech conversion
+A full-stack application that simulates AI-powered conversations with company-specific support agents.
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB
-- OpenAI API key
+- Node.js (v16 or higher)
+- MongoDB (v8.0.6 or higher)
+- npm or yarn
 
 ## Setup Instructions
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/RadoBoiii/ConversAI.git
-   cd ConversAI
-   ```
+### 1. Start MongoDB
 
-2. **Install dependencies:**
-   ```bash
-   # Install backend dependencies
-   cd backend
-   npm install
+```bash
+# Start MongoDB server (if not already running)
+mongod --dbpath /path/to/your/data/directory
 
-   # Install frontend dependencies
-   cd ../frontend
-   npm install
-   ```
+# Verify MongoDB is running
+ps aux | grep mongod
+```
 
-3. **Configure environment variables:**
-   
-   Create a `.env` file in the backend directory:
-   ```env
-   PORT=5001
-   MONGODB_URI=mongodb://localhost:27017/conversai
-   FRONTEND_URL=http://localhost:3000
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
+### 2. Clone and Install Dependencies
 
-4. **Start MongoDB:**
-   ```bash
-   # Create data directory
-   mkdir -p backend/data/db
-   
-   # Start MongoDB
-   mongod --dbpath backend/data/db
-   ```
+```bash
+# Clone the repository
+git clone <repository-url>
+cd ConversAI
 
-5. **Start the application:**
-   ```bash
-   # Start backend (in backend directory)
-   npm run dev
+# Install backend dependencies
+cd backend
+npm install
 
-   # Start frontend (in frontend directory)
-   npm run dev
-   ```
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
 
-6. Open your browser and navigate to `http://localhost:3000`
+### 3. Environment Setup
 
-## Usage
+#### Backend (.env)
+Create a `.env` file in the backend directory with:
+```
+MONGODB_URI=mongodb://localhost:27017/conversai
+PORT=5001
+FRONTEND_URL=http://localhost:3000
+OPENAI_API_KEY=your_openai_api_key
+```
 
-1. Open the Call Simulator page
-2. Click the microphone icon to start recording
-3. Speak your message
-4. Click the stop icon to send your message
-5. Wait for the AI response (both text and audio)
+#### Frontend (.env)
+Create a `.env` file in the frontend directory with:
+```
+REACT_APP_SOCKET_URL=http://localhost:5001
+```
 
-## Project Structure
+### 4. Start the Application
+
+#### Terminal 1 - Backend Server
+```bash
+cd backend
+npm run dev
+```
+
+#### Terminal 2 - Frontend Development Server
+```bash
+cd frontend
+npm start
+```
+
+### 5. Access the Application
+
+Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **MongoDB Connection Issues**
+   - Ensure MongoDB is running: `ps aux | grep mongod`
+   - Check MongoDB logs for errors
+   - Verify the MongoDB URI in your .env file
+
+2. **Port Already in Use**
+   - If you see `EADDRINUSE: address already in use :::5001`
+   - Kill the process using port 5001:
+     ```bash
+     lsof -i :5001
+     kill -9 <PID>
+     ```
+
+3. **TypeScript Errors**
+   - Run `npm run build` to check for TypeScript errors
+   - Ensure all dependencies are properly installed
+
+4. **Socket.io Connection Issues**
+   - Check if both frontend and backend servers are running
+   - Verify the socket URL in frontend .env file
+   - Check CORS settings in backend
+
+## Development
+
+### Project Structure
 
 ```
-converseai/
+ConversAI/
 ├── backend/
 │   ├── src/
-│   │   ├── routes/
-│   │   ├── models/
-│   │   └── index.ts
-│   ├── public/
-│   │   └── audio/
+│   │   ├── models/         # MongoDB models
+│   │   ├── routes/         # API routes
+│   │   ├── services/       # Business logic
+│   │   └── index.ts        # Server entry point
+│   ├── public/            # Static files
 │   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── contexts/
-│   └── package.json
-└── README.md
+└── frontend/
+    ├── src/
+    │   ├── components/    # React components
+    │   ├── pages/         # Page components
+    │   ├── contexts/      # React contexts
+    │   └── App.tsx        # Main application
+    └── package.json
 ```
+
+### Available Scripts
+
+#### Backend
+- `npm run dev`: Start development server with hot reload
+- `npm run build`: Build TypeScript files
+- `npm start`: Start production server
+
+#### Frontend
+- `npm start`: Start development server
+- `npm run build`: Build for production
+- `npm test`: Run tests
+- `npm run eject`: Eject from Create React App
+
+## Features
+
+- Real-time conversation simulation
+- Company-specific AI agents (Netflix, Amazon, Pizza Hut, Apple)
+- Audio message support
+- Sentiment analysis
+- Automatic conversation titling
+- Conversation history and management
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 ## License

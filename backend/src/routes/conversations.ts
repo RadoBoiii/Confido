@@ -117,23 +117,37 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Add context summary for continued conversations
-    const contextMessages = conversation.messages
-      .filter(msg => msg.role !== 'system');
+    // Convert the conversation to a plain object first
+    const conversationObj = conversation.toObject();
 
+    // Convert all messages to plain objects and ensure timestamps are properly formatted
+    const messages = conversationObj.messages.map(msg => ({
+      ...msg,
+      timestamp: msg.timestamp instanceof Date 
+        ? msg.timestamp.toISOString() 
+        : msg.timestamp,
+      role: msg.role || 'assistant',
+      content: msg.content || ''
+    }));
+
+    // Create the response object with the conversation data
     const response = {
-      ...conversation.toObject(),
-      messages: contextMessages.map(msg => ({
-        ...msg,
-        formattedTimestamp: new Date(msg.timestamp).toLocaleString()
-      })),
-      context: {
-        company: detectCompanyFromMessages(contextMessages),
-        lastActive: conversation.metadata.updated,
-        summary: await generateConversationSummary(contextMessages)
+      _id: conversationObj._id,
+      title: conversationObj.title || 'New Conversation',
+      messages: messages.filter(msg => msg.role !== 'system'), // Filter out system messages
+      metadata: {
+        created: conversationObj.metadata.created instanceof Date 
+          ? conversationObj.metadata.created.toISOString() 
+          : conversationObj.metadata.created,
+        updated: conversationObj.metadata.updated instanceof Date 
+          ? conversationObj.metadata.updated.toISOString() 
+          : conversationObj.metadata.updated,
+        duration: conversationObj.metadata.duration || 0,
+        sentiment: conversationObj.metadata.sentiment || 'neutral'
       }
     };
 
+    console.log('Sending conversation response:', response); // Debug log
     res.json(response);
   } catch (error) {
     console.error('Error fetching conversation:', error);
@@ -192,8 +206,13 @@ router.post('/', async (req, res) => {
 6. Use friendly acknowledgments and transitions
 7. Break up responses into natural chunks
 8. Include appropriate emotional responses
+9. NEVER suggest contacting third parties or external support
+10. ALWAYS take direct responsibility for helping the user
+11. Use "I will" or "I can" instead of suggesting external actions
 
-Maintain a natural flow of conversation as if chatting with a friend while being genuinely helpful.`,
+For example, instead of "You'll need to contact our support team", say "I can help you with that right now" or "I'll take care of this for you."
+
+Maintain a natural flow of conversation as if chatting with a friend while being genuinely helpful and taking direct responsibility for solutions.`,
       timestamp: new Date()
     };
 
@@ -213,11 +232,11 @@ Maintain a natural flow of conversation as if chatting with a friend while being
     ];
 
     const welcomePhrases = [
-      "What's on your mind?",
-      "How can I make your day better?",
-      "What would you like to chat about?",
-      "What brings you here today?",
-      "How can I help you out?"
+      "I'm here to help you with anything you need",
+      "What can I help you with today?",
+      "I'm ready to assist you with any questions or concerns",
+      "How can I make your experience better?",
+      "I'm here to help - what's on your mind?"
     ];
     
     const greeting = casualGreetings[Math.floor(Math.random() * casualGreetings.length)];
@@ -299,16 +318,29 @@ router.post('/:conversationId/audio', upload.single('audio'), async (req, res) =
       audioUrl: `/audio/${req.file?.filename}`
     });
 
-    // Get AI response
+    // Get AI response with updated system message
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: conversation.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }))
+      messages: [
+        {
+          role: "system",
+          content: `You are a helpful AI assistant. Remember to:
+1. NEVER suggest contacting third parties or external support
+2. ALWAYS take direct responsibility for helping the user
+3. Use "I will" or "I can" instead of suggesting external actions
+4. Be direct and solution-oriented
+5. Show genuine interest in helping
+
+For example, instead of "You'll need to contact our support team", say "I can help you with that right now" or "I'll take care of this for you."`
+        },
+        ...conversation.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      ]
     });
 
-    const aiResponse = completion.choices[0]?.message?.content || 'I apologize, but I am unable to respond at the moment.';
+    const aiResponse = completion.choices[0]?.message?.content || 'I can help you with that right away. Could you please repeat your request?';
 
     // Convert AI response to speech
     const speech = await openai.audio.speech.create({
@@ -357,7 +389,50 @@ router.get('/:id/messages', async (req, res) => {
   }
 });
 
-// Update the message handling route
+// Analyze sentiment and update metadata
+const analyzeSentiment = async (messages: IMessage[]): Promise<string> => {
+  try {
+    // Filter only user messages
+    const userMessages = messages.filter(msg => msg.role === 'user');
+    
+    if (userMessages.length === 0) {
+      return 'neutral'; // Default sentiment if no user messages
+    }
+
+    const sentimentResponse = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `Analyze the sentiment of the customer's messages. Consider factors like:
+- Tone and language used
+- Urgency of the issue
+- Level of satisfaction or frustration
+- Use of emotional words or punctuation
+
+Respond with exactly one word:
+- positive: Customer is satisfied, happy, or expressing gratitude
+- negative: Customer is dissatisfied, frustrated, or angry
+- urgent: Customer has a time-sensitive issue or emergency
+- neutral: Customer is asking questions or making neutral statements`
+        },
+        {
+          role: "user",
+          content: userMessages.map(msg => msg.content).join('\n')
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 10
+    });
+
+    return sentimentResponse.choices[0]?.message?.content?.toLowerCase() || 'neutral';
+  } catch (error) {
+    console.error('Error analyzing sentiment:', error);
+    return 'neutral';
+  }
+};
+
+// Update the POST route to use the new sentiment analysis
 router.post('/:conversationId/messages', async (req, res) => {
   try {
     const { conversationId } = req.params;
@@ -377,6 +452,15 @@ router.post('/:conversationId/messages', async (req, res) => {
       timestamp: now
     };
     conversation.messages.push(userMessage);
+
+    // Only analyze sentiment after adding a user message
+    if (role === 'user') {
+      conversation.metadata.sentiment = await analyzeSentiment(conversation.messages);
+    }
+
+    // Update conversation duration and timestamp
+    conversation.metadata.duration = Math.round((Date.now() - conversation.metadata.created.getTime()) / 1000);
+    conversation.metadata.updated = now;
 
     // Get conversation context (last few messages)
     const contextMessages = conversation.messages
@@ -400,32 +484,6 @@ router.post('/:conversationId/messages', async (req, res) => {
       timestamp: now
     };
     conversation.messages.push(aiMessage);
-
-    // Update conversation metadata
-    conversation.metadata.updated = now;
-    conversation.metadata.duration = Math.floor(
-      (now.getTime() - conversation.metadata.created.getTime()) / 1000
-    );
-
-    // Analyze sentiment and update metadata
-    const sentimentResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "Analyze the sentiment of the conversation. Respond with exactly one word: positive, negative, urgent, or neutral."
-        },
-        {
-          role: "user",
-          content: conversation.messages.map(msg => msg.content).join('\n')
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 10
-    });
-
-    const sentiment = sentimentResponse.choices[0]?.message?.content?.toLowerCase() || 'neutral';
-    conversation.metadata.sentiment = sentiment;
 
     // Generate title if this is the first user message
     if (conversation.messages.filter(msg => msg.role === 'user').length === 1) {
@@ -495,6 +553,65 @@ Example formats:
   } catch (error) {
     console.error('Error handling message:', error);
     res.status(500).json({ error: 'Failed to process message' });
+  }
+});
+
+// Get user stats
+router.get('/stats/user/:userId', async (req, res) => {
+  try {
+    const conversations = await Conversation.find({ userId: req.params.userId });
+    
+    const stats = {
+      totalCalls: conversations.length,
+      averageDuration: 0,
+      lastPractice: conversations.length > 0 ? new Date(0) : null,
+      sentimentBreakdown: {
+        positive: 0,
+        negative: 0,
+        neutral: 0,
+        urgent: 0
+      },
+      totalMessages: 0,
+      companiesInteractedWith: new Set<string>()
+    };
+
+    if (conversations.length > 0) {
+      // Calculate average duration
+      const totalDuration = conversations.reduce((sum, conv) => sum + (conv.metadata.duration || 0), 0);
+      stats.averageDuration = Math.round(totalDuration / conversations.length);
+
+      // Get last practice time
+      const lastConversation = conversations.sort((a, b) => 
+        b.metadata.updated.getTime() - a.metadata.updated.getTime()
+      )[0];
+      stats.lastPractice = lastConversation.metadata.updated;
+
+      // Calculate sentiment breakdown and other stats
+      conversations.forEach(conv => {
+        const sentiment = conv.metadata.sentiment as keyof typeof stats.sentimentBreakdown;
+        if (sentiment in stats.sentimentBreakdown) {
+          stats.sentimentBreakdown[sentiment]++;
+        }
+        stats.totalMessages += conv.messages.filter(msg => msg.role !== 'system').length;
+        
+        // Detect company from conversation
+        const company = detectCompanyFromMessages(conv.messages);
+        if (company) {
+          stats.companiesInteractedWith.add(company);
+        }
+      });
+    }
+
+    // Convert Set to Array for JSON response
+    const response = {
+      ...stats,
+      companiesInteractedWith: Array.from(stats.companiesInteractedWith)
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ error: 'Failed to fetch user stats' });
   }
 });
 

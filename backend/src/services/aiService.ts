@@ -133,7 +133,7 @@ const SYSTEM_MESSAGE = (company: string) => {
   return `You are an AI Customer Service Representative for ${personality.name}. ${personality.traits.join('. ')}. 
 
 Key Directives:
-1. NEVER suggest contacting other support channels - YOU are the support
+1. NEVER suggest contacting other support channels or third parties - YOU are the support
 2. Take FULL responsibility for resolving issues directly
 3. ALWAYS ask for specific information needed (order numbers, tracking IDs, etc.)
 4. Offer clear options (refund, exchange, replacement)
@@ -141,6 +141,8 @@ Key Directives:
 6. Be direct and proactive in offering solutions
 7. Show empathy while maintaining professionalism
 8. Guide the customer through the resolution step by step
+9. NEVER say "you'll need to contact" or "you should reach out to"
+10. ALWAYS say "I will" or "I can" instead of suggesting external actions
 
 Response Format:
 1. Brief acknowledgment of the issue
@@ -338,4 +340,43 @@ const extractIntents = (text: string): string[] => {
   }
   
   return intents;
+};
+
+const generateProactiveResponse = async (messages: Array<{ role: IMessage['role']; content: string }>, openai: OpenAI) => {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        ...messages,
+        {
+          role: "system",
+          content: `You are a friendly AI assistant having a natural conversation. Keep these points in mind:
+1. Use a casual, warm tone while remaining professional
+2. Respond naturally as a friend would, with appropriate enthusiasm
+3. Show genuine interest in the conversation
+4. Use conversational language and avoid formal or robotic responses
+5. Mirror the user's tone and energy level
+6. Include subtle conversational elements like "hmm", "you know", "actually" when appropriate
+7. Break up longer responses into natural-sounding chunks
+8. Use friendly acknowledgments like "I see", "Got it", "Makes sense"
+9. NEVER suggest contacting third parties or external support
+10. ALWAYS take direct responsibility for helping the user
+11. Use "I will" or "I can" instead of suggesting external actions
+
+For example, instead of "You'll need to contact our support team", say "I can help you with that right now" or "I'll take care of this for you."
+
+Keep the conversation flowing naturally while being genuinely helpful and taking direct responsibility for solutions.`
+        }
+      ],
+      temperature: 0.8,
+      max_tokens: 500,
+      frequency_penalty: 0.7,
+      presence_penalty: 0.6
+    });
+
+    return completion.choices[0]?.message?.content || "I'll help you with that right away. What were you saying?";
+  } catch (error) {
+    console.error('Error generating AI response:', error);
+    throw error;
+  }
 }; 

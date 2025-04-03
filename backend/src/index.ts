@@ -1,6 +1,7 @@
 // File: backend/src/index.ts
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 // Load environment variables first
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -10,6 +11,8 @@ import http from 'http';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
+import Conversation from './models/conversation';
+import OpenAI from 'openai';
 
 // Import routes
 import conversationRoutes from './routes/conversations';
@@ -43,6 +46,11 @@ app.use('/audio', express.static(path.join(__dirname, '..', 'public', 'audio')))
 // Use routes
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/auth', authRoutes);
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // MongoDB connection options
 const mongooseOptions = {
@@ -93,25 +101,58 @@ io.on('connection', (socket) => {
       // Emit typing indicator
       socket.emit('typing', true);
 
-      // Process the message through the conversation route
-      const response = await fetch(`http://localhost:5001/api/conversations/${data.conversationId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ content: data.message, role: 'user' })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process message');
+      const conversation = await Conversation.findById(data.conversationId);
+      if (!conversation) {
+        throw new Error('Conversation not found');
       }
 
-      const result = await response.json();
+      // Add user message
+      const userMessage = {
+        role: 'user' as const,
+        content: data.message,
+        timestamp: new Date()
+      };
+      conversation.messages.push(userMessage);
+
+      // Generate AI response
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: conversation.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content || 'I apologize, but I am having trouble generating a response.';
+
+      // Convert AI response to speech
+      const speech = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: "alloy",
+        input: aiResponse
+      });
+
+      // Save audio file
+      const audioFileName = `response-${Date.now()}.mp3`;
+      const audioPath = path.join(__dirname, '..', 'public', 'audio', audioFileName);
+      const audioBuffer = Buffer.from(await speech.arrayBuffer());
+      await fs.promises.writeFile(audioPath, audioBuffer);
+
+      // Add AI response to conversation
+      const aiMessage = {
+        role: 'assistant' as const,
+        content: aiResponse,
+        timestamp: new Date(),
+        audioUrl: `/audio/${audioFileName}`
+      };
+      conversation.messages.push(aiMessage);
+
+      await conversation.save();
 
       // Emit the AI response
       socket.emit('ai_response', {
-        message: result.aiResponse,
-        audioUrl: result.audioUrl
+        message: aiResponse,
+        audioUrl: `/audio/${audioFileName}`
       });
 
     } catch (error) {

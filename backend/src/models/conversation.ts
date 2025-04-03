@@ -4,7 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: Date;
+  timestamp: Date | string;
   audioUrl?: string;
 }
 

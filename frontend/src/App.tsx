@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import CallSimulator from './pages/CallSimulator';
 import Conversations from './pages/Conversations';
+import ConversationDetail from './pages/ConversationDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import { AuthProvider } from './contexts/AuthContext';
@@ -16,6 +17,10 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-gray-100">
           <Navbar />
           <Routes>
+            <Route path="/" element={<Navigate to="/conversations" replace />} />
+            <Route path="/conversations" element={<Conversations />} />
+            <Route path="/conversations/:id" element={<ConversationDetail />} />
+            <Route path="/call" element={<CallSimulator />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
@@ -26,23 +31,6 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/call-simulator"
-              element={
-                <ProtectedRoute>
-                  <CallSimulator />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/conversations"
-              element={
-                <ProtectedRoute>
-                  <Conversations />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </div>
       </Router>

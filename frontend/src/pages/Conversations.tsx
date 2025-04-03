@@ -1,140 +1,142 @@
 // File: frontend/src/pages/Conversations.tsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { ChatBubbleLeftRightIcon, PhoneIcon, TrashIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 interface Conversation {
   _id: string;
   title: string;
-  createdAt: string;
-  lastMessage: string;
-  messageCount: number;
+  messages: Array<{
+    content: string;
+    role: string;
+    timestamp: string;
+  }>;
+  metadata: {
+    duration: number;
+    sentiment: string;
+    created: string;
+    updated: string;
+  };
 }
 
 const Conversations: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        // TODO: Implement actual API call to fetch conversations
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data
-        setConversations([
-          {
-            _id: '1',
-            title: 'Customer Support Call',
-            createdAt: '2023-04-15T10:30:00Z',
-            lastMessage: 'Thank you for your patience.',
-            messageCount: 12
-          },
-          {
-            _id: '2',
-            title: 'Sales Pitch Practice',
-            createdAt: '2023-04-14T15:45:00Z',
-            lastMessage: 'Would you like to learn more about our premium features?',
-            messageCount: 8
-          }
-        ]);
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchConversations();
   }, []);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const fetchConversations = async () => {
+    try {
+      const response = await axios.get('http://localhost:5001/api/conversations');
+      setConversations(response.data);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      setIsLoading(false);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(`http://localhost:5001/api/conversations/${id}`);
+      setConversations(prev => prev.filter(conv => conv._id !== id));
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
+
+  const getSentimentColor = (sentiment: string) => {
+    const colors: { [key: string]: string } = {
+      positive: 'bg-green-500/30 text-green-300 border-green-500/30',
+      neutral: 'bg-blue-500/30 text-blue-300 border-blue-500/30',
+      negative: 'bg-red-500/30 text-red-300 border-red-500/30'
+    };
+    return colors[sentiment] || colors.neutral;
+  };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleViewConversation = (id: string) => {
+    navigate(`/conversations/${id}`);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Your Conversations</h1>
-              <Link
-                to="/call-simulator"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                Start New Call
-              </Link>
-            </div>
-
-            {conversations.length === 0 ? (
-              <div className="text-center py-12">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No conversations</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Get started by starting a new call simulation.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {conversations.map((conversation) => (
-                  <Link
-                    key={conversation._id}
-                    to={`/conversations/${conversation._id}`}
-                    className="block p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {conversation.title}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {conversation.lastMessage}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">
-                          {formatDate(conversation.createdAt)}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {conversation.messageCount} messages
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold gradient-text animate-fadeIn">Conversation History</h1>
+          <button
+            onClick={() => navigate('/call')}
+            className="px-6 py-3 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 backdrop-blur-xl border border-white/20 animate-fadeIn"
+          >
+            <PhoneIcon className="h-5 w-5" />
+            <span>New Call</span>
+          </button>
         </div>
+
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="loading-spinner"></div>
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="glass-container rounded-3xl p-12 text-center animate-fadeIn">
+            <ChatBubbleLeftRightIcon className="h-16 w-16 mx-auto mb-4 text-blue-400 animate-float" />
+            <h2 className="text-2xl font-semibold mb-4">No conversations yet</h2>
+            <p className="text-gray-400 mb-8">Start a new call to begin your first conversation</p>
+            <button
+              onClick={() => navigate('/call')}
+              className="px-6 py-3 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 mx-auto backdrop-blur-xl border border-white/20"
+            >
+              <PhoneIcon className="h-5 w-5" />
+              <span>Start New Call</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {conversations.map((conversation) => (
+              <div
+                key={conversation._id}
+                onClick={() => handleViewConversation(conversation._id)}
+                className="glass-container rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:bg-blue-500/10 animate-fadeIn"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-semibold truncate">{conversation.title}</h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(conversation._id);
+                    }}
+                    className="p-2 hover:bg-red-500/20 rounded-full transition-colors"
+                  >
+                    <TrashIcon className="h-5 w-5 text-red-400" />
+                  </button>
+                </div>
+                <div className="flex items-center space-x-4 mb-4">
+                  <div className={`px-3 py-1 rounded-full text-sm ${getSentimentColor(conversation.metadata.sentiment)}`}>
+                    {conversation.metadata.sentiment}
+                  </div>
+                  <div className="flex items-center text-gray-400">
+                    <ClockIcon className="h-4 w-4 mr-1" />
+                    <span>{formatDuration(conversation.metadata.duration)}</span>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-400">
+                  {format(new Date(conversation.metadata.created), 'MMM d, yyyy h:mm a')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

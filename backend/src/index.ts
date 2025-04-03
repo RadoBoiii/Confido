@@ -44,6 +44,46 @@ app.use('/audio', express.static(path.join(__dirname, '..', 'public', 'audio')))
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/auth', authRoutes);
 
+// MongoDB connection options
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+};
+
+// Connect to MongoDB with retry logic
+const connectWithRetry = () => {
+  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/conversai';
+  console.log('Attempting MongoDB connection to:', mongoUri);
+  
+  mongoose.connect(mongoUri)
+    .then(() => {
+      console.log('Successfully connected to MongoDB');
+    })
+    .catch((error) => {
+      console.error('MongoDB connection error:', error);
+      console.log('Retrying connection in 5 seconds...');
+      setTimeout(connectWithRetry, 5000);
+    });
+};
+
+// Handle MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose disconnected from MongoDB');
+});
+
+// Initial connection attempt
+connectWithRetry();
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -86,15 +126,6 @@ io.on('connection', (socket) => {
     console.log('User disconnected:', socket.id);
   });
 });
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/conversai')
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
-  });
 
 // Start server
 const PORT = process.env.PORT || 5001;

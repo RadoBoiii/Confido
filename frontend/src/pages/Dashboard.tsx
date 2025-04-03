@@ -17,7 +17,7 @@ const Dashboard: React.FC = () => {
             
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <Link
-                to="/call-simulator"
+                to="/call"
                 className="bg-indigo-600 text-white p-6 rounded-lg shadow hover:bg-indigo-700 transition-colors"
               >
                 <h2 className="text-xl font-semibold mb-2">Start New Call</h2>

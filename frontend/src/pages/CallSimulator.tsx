@@ -12,7 +12,16 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   timestamp: Date;
   audioUrl?: string;
-  company?: string;
+}
+
+interface DemoAgent {
+  name: string;
+  company: string;
+  personality: string;
+}
+
+interface StartConversationData {
+  userId: string;
 }
 
 // Add helper function for time-based greeting
@@ -47,28 +56,10 @@ const getCompanyBranding = (company: string) => {
   </svg>`;
   
   const branding: { [key: string]: { color: string, name: string, bgColor: string, avatar: string } } = {
-    'amazon': {
-      color: 'bg-[#232F3E]',
-      name: 'Amazon Support',
+    'techcare solutions': {
+      color: 'bg-blue-600',
+      name: 'TechCare Solutions',
       bgColor: 'bg-blue-600',
-      avatar: defaultAvatar
-    },
-    'pizza hut': {
-      color: 'bg-[#EE3124]',
-      name: 'Pizza Hut Support',
-      bgColor: 'bg-red-600',
-      avatar: defaultAvatar
-    },
-    'netflix': {
-      color: 'bg-[#E50914]',
-      name: 'Netflix Support',
-      bgColor: 'bg-red-600',
-      avatar: defaultAvatar
-    },
-    'apple': {
-      color: 'bg-[#000000]',
-      name: 'Apple Support',
-      bgColor: 'bg-gray-900',
       avatar: defaultAvatar
     },
     'general': {
@@ -90,6 +81,7 @@ const CallSimulator: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [demoAgent, setDemoAgent] = useState<DemoAgent | null>(null);
   
   const socketRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -123,16 +115,17 @@ const CallSimulator: React.FC = () => {
     });
 
     socketRef.current.on('ai_response', (data: any) => {
-      const company = data.company || 'general';
-      setCurrentCompany(company);
+      if (data.demoAgent) {
+        setDemoAgent(data.demoAgent);
+        setCurrentCompany(data.demoAgent.company.toLowerCase());
+      }
       
       addMessage({
         id: Date.now().toString(),
         content: data.message,
         role: 'assistant',
         timestamp: new Date(),
-        audioUrl: data.audioUrl,
-        company: company
+        audioUrl: data.audioUrl
       });
 
       setIsProcessing(false);
@@ -146,11 +139,31 @@ const CallSimulator: React.FC = () => {
         const audio = new Audio(`http://localhost:5001${data.audioUrl}`);
         audio.onended = () => setIsAgentSpeaking(false);
         audio.play();
-      } else {
-        // Fallback to browser's text-to-speech
-        const speech = new SpeechSynthesisUtterance(data.message);
-        speech.onend = () => setIsAgentSpeaking(false);
-        window.speechSynthesis.speak(speech);
+      }
+    });
+
+    socketRef.current.on('conversation_started', (data: any) => {
+      setConversationId(data.conversationId);
+      if (data.demoAgent) {
+        setDemoAgent(data.demoAgent);
+        setCurrentCompany(data.demoAgent.company.toLowerCase());
+      }
+      if (data.welcomeMessage) {
+        addMessage({
+          id: Date.now().toString(),
+          content: data.welcomeMessage.content,
+          role: 'assistant',
+          timestamp: new Date(),
+          audioUrl: data.welcomeMessage.audioUrl
+        });
+
+        // Play welcome message audio
+        if (data.welcomeMessage.audioUrl) {
+          const audio = new Audio(`http://localhost:5001${data.welcomeMessage.audioUrl}`);
+          audio.onended = () => setIsAgentSpeaking(false);
+          setIsAgentSpeaking(true);
+          audio.play();
+        }
       }
     });
 
@@ -158,6 +171,25 @@ const CallSimulator: React.FC = () => {
       console.error('Socket error:', error);
       setIsProcessing(false);
       setIsTyping(false);
+    });
+
+    socketRef.current.on('start_conversation', async (data: StartConversationData) => {
+      try {
+        const { userId } = data;
+        
+        if (!userId) {
+          throw new Error('userId is required');
+        }
+
+        socketRef.current.emit('start_conversation', {
+          userId,
+          isCallSimulator: true
+        });
+
+      } catch (error) {
+        console.error('Error starting conversation:', error);
+        socketRef.current.emit('error', { message: 'Failed to start conversation' });
+      }
     });
 
     return () => {
@@ -177,39 +209,14 @@ const CallSimulator: React.FC = () => {
 
   // Create new conversation if needed
   useEffect(() => {
-    if (!conversationId) {
-      createConversation();
-    }
-  }, [conversationId]);
-
-  const createConversation = async () => {
-    if (conversationId) return; // Prevent multiple creations
-    
-    try {
-      const res = await axios.post('http://localhost:5001/api/conversations', {
-        title: `Call at ${new Date().toLocaleString()}`
+    if (!conversationId && user?._id) {
+      console.log('Starting conversation with socket...');
+      socketRef.current?.emit('start_conversation', {
+        userId: user._id,
+        isCallSimulator: true
       });
-      
-      setConversationId(res.data._id);
-      
-      // Only add non-system messages
-      const initialMessages = filterMessages(res.data.messages);
-      setMessages(initialMessages);
-
-      // Play welcome message audio if available
-      const welcomeMessage = initialMessages[0];
-      if (welcomeMessage?.audioUrl) {
-        const audio = new Audio(`http://localhost:5001${welcomeMessage.audioUrl}`);
-        audio.play();
-      } else {
-        // Fallback to browser's text-to-speech
-        const speech = new SpeechSynthesisUtterance(welcomeMessage.content);
-        window.speechSynthesis.speak(speech);
-      }
-    } catch (error) {
-      console.error('Error creating conversation:', error);
     }
-  };
+  }, [conversationId, user]);
 
   const addMessage = (message: Message) => {
     setMessages(prev => [...prev, message]);
@@ -324,22 +331,34 @@ const CallSimulator: React.FC = () => {
     }
   };
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!inputMessage.trim() || !conversationId) return;
     
-    setIsProcessing(true);
+    // Create and add user message to the UI
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: inputMessage,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMessage]);
     
-    try {
-      // Send message to backend
-      socketRef.current.emit('user_message', {
-        conversationId,
-        message: inputMessage
-      });
-      
-      setInputMessage('');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setIsProcessing(false);
+    // Send message to backend
+    socketRef.current?.emit('user_message', {
+      conversationId,
+      message: inputMessage,
+      isCallSimulator: true
+    });
+    
+    // Clear input and set processing state
+    setInputMessage('');
+    setIsProcessing(true);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -369,7 +388,7 @@ const CallSimulator: React.FC = () => {
             <div className="w-full h-full text-white" dangerouslySetInnerHTML={{ __html: getCompanyBranding(currentCompany).avatar }} />
           </div>
           <span className="text-lg font-medium text-white/90">
-            {getCompanyBranding(currentCompany).name}
+            {demoAgent ? `${demoAgent.name} - ${demoAgent.company}` : getCompanyBranding(currentCompany).name}
           </span>
         </div>
       </div>
@@ -377,15 +396,15 @@ const CallSimulator: React.FC = () => {
       <div className="flex-1 max-w-5xl mx-auto p-4 w-full">
         <div className="bg-black/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 p-6 mb-4 h-[calc(100vh-180px)] flex flex-col">
           <div className="flex-1 overflow-y-auto mb-4 space-y-6 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-4">
-            {filterMessages(messages).map((message, index) => (
+            {messages.map((message, index) => (
               <div
                 key={message.id}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} items-end space-x-3 animate-fadeIn`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {message.role === 'assistant' && (
-                  <div className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${getCompanyBranding(message.company || 'general').bgColor} ring-2 ring-white/30 animate-scaleIn`}>
-                    <div className="w-full h-full p-1 text-white" dangerouslySetInnerHTML={{ __html: getCompanyBranding(message.company || 'general').avatar }} />
+                  <div className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${getCompanyBranding(demoAgent?.company.toLowerCase() || 'general').bgColor} ring-2 ring-white/30 animate-scaleIn`}>
+                    <div className="w-full h-full p-1 text-white" dangerouslySetInnerHTML={{ __html: getCompanyBranding(demoAgent?.company.toLowerCase() || 'general').avatar }} />
                     {isAgentSpeaking && message.id === messages[messages.length - 1].id && (
                       <div className="absolute -bottom-1 -right-1 w-4 h-4">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -403,7 +422,7 @@ const CallSimulator: React.FC = () => {
                   } animate-slideIn`}>
                     <div className="flex items-center mb-2">
                       <span className={`text-sm font-medium ${message.role === 'user' ? 'text-blue-100' : 'text-white/80'}`}>
-                        {message.role === 'user' ? 'You' : getCompanyBranding(message.company || 'general').name}
+                        {message.role === 'user' ? 'You' : demoAgent ? `${demoAgent.name} - ${demoAgent.company}` : 'Assistant'}
                       </span>
                       <span className={`mx-2 text-xs ${message.role === 'user' ? 'text-blue-200' : 'text-white/50'}`}>•</span>
                       <span className={`text-xs ${message.role === 'user' ? 'text-blue-200' : 'text-white/50'}`}>
@@ -460,19 +479,36 @@ const CallSimulator: React.FC = () => {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !isRecording && handleSendMessage()}
+              onKeyPress={handleKeyPress}
               placeholder="Type your message..."
               className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-300"
-              disabled={isRecording}
+              disabled={isRecording || isProcessing}
             />
             
             <button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isProcessing || isRecording}
+              className={`${
+                !inputMessage.trim() || isProcessing || isRecording
+                  ? 'bg-gray-600/50 cursor-not-allowed'
+                  : 'bg-green-500/80 hover:bg-green-600/80 hover:scale-105'
+              } text-white p-4 rounded-xl transition-all duration-300 transform flex items-center justify-center backdrop-blur-xl border border-white/20`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+              </svg>
+            </button>
+            
+            <button
               onClick={isRecording ? handleStopRecording : handleStartRecording}
+              disabled={isProcessing}
               className={`${
                 isRecording
                   ? 'bg-red-500/80 hover:bg-red-600/80'
                   : 'bg-blue-500/80 hover:bg-blue-600/80'
-              } text-white p-4 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center relative group backdrop-blur-xl border border-white/20`}
+              } text-white p-4 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center relative group backdrop-blur-xl border border-white/20 ${
+                isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               {isRecording ? (
                 <>
@@ -494,20 +530,6 @@ const CallSimulator: React.FC = () => {
               ) : (
                 <MicrophoneIcon className="h-5 w-5" />
               )}
-            </button>
-
-            <button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isProcessing || isRecording}
-              className={`${
-                !inputMessage.trim() || isProcessing || isRecording
-                  ? 'bg-gray-600/50 cursor-not-allowed'
-                  : 'bg-green-500/80 hover:bg-green-600/80 hover:scale-105'
-              } text-white p-4 rounded-xl transition-all duration-300 transform flex items-center justify-center backdrop-blur-xl border border-white/20`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-              </svg>
             </button>
           </div>
         </div>

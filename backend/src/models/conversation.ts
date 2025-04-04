@@ -10,6 +10,7 @@ export interface IMessage {
 
 export interface IConversation extends Document {
   userId: mongoose.Types.ObjectId;
+  agentId?: mongoose.Types.ObjectId;
   title: string;
   messages: IMessage[];
   metadata: {
@@ -23,6 +24,7 @@ export interface IConversation extends Document {
 
 const ConversationSchema: Schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  agentId: { type: Schema.Types.ObjectId, ref: 'Agent', required: false },
   title: { type: String, required: true },
   messages: [{
     role: { type: String, enum: ['user', 'assistant', 'system'], required: true },

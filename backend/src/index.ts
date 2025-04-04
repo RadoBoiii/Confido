@@ -13,10 +13,12 @@ import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import Conversation from './models/conversation';
 import OpenAI from 'openai';
+import { demoAgent } from './config/demoAgent';
 
 // Import routes
 import conversationRoutes from './routes/conversations';
 import authRoutes from './routes/auth';
+import agentRoutes from './routes/agents';
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +48,7 @@ app.use('/audio', express.static(path.join(__dirname, '..', 'public', 'audio')))
 // Use routes
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/agents', agentRoutes);
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -117,10 +120,20 @@ io.on('connection', (socket) => {
       // Generate AI response
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
-        messages: conversation.messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }))
+        messages: [
+          {
+            role: "system",
+            content: data.isCallSimulator ? demoAgent.systemPrompt : 
+              `You are ${data.agentInfo?.name}, a customer service representative for ${data.agentInfo?.company}. 
+              Personality: ${data.agentInfo?.personality}
+              Company Information: ${data.agentInfo?.companyInfo}
+              ${data.agentInfo?.prompts?.join('\n') || ''}`
+          },
+          ...conversation.messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        ]
       });
 
       const aiResponse = completion.choices[0]?.message?.content || 'I apologize, but I am having trouble generating a response.';
@@ -128,7 +141,7 @@ io.on('connection', (socket) => {
       // Convert AI response to speech
       const speech = await openai.audio.speech.create({
         model: "tts-1",
-        voice: "alloy",
+        voice: data.isCallSimulator ? demoAgent.voiceId : "alloy",
         input: aiResponse
       });
 
@@ -149,10 +162,17 @@ io.on('connection', (socket) => {
 
       await conversation.save();
 
-      // Emit the AI response
+      // Emit the AI response with demo agent info if in call simulator mode
       socket.emit('ai_response', {
         message: aiResponse,
-        audioUrl: `/audio/${audioFileName}`
+        audioUrl: `/audio/${audioFileName}`,
+        ...(data.isCallSimulator && {
+          demoAgent: {
+            name: demoAgent.name,
+            company: demoAgent.company,
+            personality: demoAgent.personality
+          }
+        })
       });
 
     } catch (error) {
@@ -160,6 +180,123 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Failed to process message' });
     } finally {
       socket.emit('typing', false);
+    }
+  });
+
+  socket.on('start_conversation', async (data) => {
+    try {
+      console.log('Starting conversation with data:', data);
+      const { userId, isCallSimulator } = data;
+
+      if (!userId) {
+        throw new Error('userId is required');
+      }
+
+      let systemMessage: {
+        role: 'system';
+        content: string;
+        timestamp: Date;
+      };
+
+      let welcomeMessage: {
+        role: 'assistant';
+        content: string;
+        timestamp: Date;
+        audioUrl?: string;
+      };
+
+      if (isCallSimulator) {
+        console.log('Creating demo agent conversation');
+        systemMessage = {
+          role: 'system',
+          content: demoAgent.systemPrompt,
+          timestamp: new Date()
+        };
+
+        welcomeMessage = {
+          role: 'assistant',
+          content: demoAgent.greeting,
+          timestamp: new Date()
+        };
+      } else {
+        if (!data.agentId || !data.agentInfo) {
+          throw new Error('agentId and agentInfo are required for non-simulator conversations');
+        }
+
+        systemMessage = {
+          role: 'system',
+          content: `You are ${data.agentInfo.name}, a customer service representative for ${data.agentInfo.company}. 
+          Personality: ${data.agentInfo.personality}
+          Company Information: ${data.agentInfo.companyInfo}
+          ${data.agentInfo.prompts.join('\n')}`,
+          timestamp: new Date()
+        };
+
+        welcomeMessage = {
+          role: 'assistant',
+          content: `Hi, I'm ${data.agentInfo.name}. How can I help you today?`,
+          timestamp: new Date()
+        };
+      }
+
+      // Generate welcome message audio
+      const speech = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: isCallSimulator ? demoAgent.voiceId : "alloy",
+        input: welcomeMessage.content
+      });
+
+      // Save audio file
+      const audioFileName = `welcome-${Date.now()}.mp3`;
+      const audioPath = path.join(__dirname, '..', 'public', 'audio', audioFileName);
+      const audioBuffer = Buffer.from(await speech.arrayBuffer());
+      await fs.promises.writeFile(audioPath, audioBuffer);
+
+      // Add audio URL to welcome message
+      welcomeMessage.audioUrl = `/audio/${audioFileName}`;
+
+      // Create conversation with conditional agentId
+      const conversationData: any = {
+        userId,
+        title: isCallSimulator ? 
+          `Demo Call with ${demoAgent.name} - ${new Date().toLocaleDateString()}` :
+          `Chat with ${data.agentInfo?.name} at ${new Date().toLocaleDateString()}`,
+        messages: [systemMessage, welcomeMessage],
+        metadata: {
+          duration: 0,
+          sentiment: 'neutral',
+          intents: [],
+          created: new Date(),
+          updated: new Date()
+        }
+      };
+
+      // Only add agentId if not in call simulator mode
+      if (!isCallSimulator && data.agentId) {
+        conversationData.agentId = data.agentId;
+      }
+
+      const conversation = await Conversation.create(conversationData);
+
+      // Emit conversation started event
+      socket.emit('conversation_started', {
+        conversationId: conversation._id,
+        welcomeMessage,
+        ...(isCallSimulator && {
+          demoAgent: {
+            name: demoAgent.name,
+            company: demoAgent.company,
+            personality: demoAgent.personality
+          }
+        })
+      });
+
+    } catch (error: any) {
+      console.error('Error starting conversation:', error);
+      socket.emit('error', { 
+        message: 'Failed to start conversation', 
+        details: error?.message || 'Unknown error'
+      });
     }
   });
 

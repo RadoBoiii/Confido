@@ -43,6 +43,16 @@ const Navbar: React.FC = () => {
               >
                 Conversations
               </Link>
+              <Link
+                to="/agents"
+                className={`${
+                  location.pathname === '/agents'
+                    ? 'text-blue-400 border-blue-500'
+                    : 'text-white/70 hover:text-white border-transparent hover:border-white/20'
+                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
+              >
+                Agents
+              </Link>
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">

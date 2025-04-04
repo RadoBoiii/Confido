@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { Types } from 'mongoose';
 import dotenv from 'dotenv';
+import { demoAgent } from '../config/demoAgent';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -101,7 +102,10 @@ Keep the conversation flowing naturally while being genuinely helpful.`
 // Get all conversations
 router.get('/', async (req, res) => {
   try {
-    const conversations = await Conversation.find().sort({ 'metadata.created': -1 });
+    const { agentId } = req.query;
+    const query = agentId ? { agentId: new Types.ObjectId(agentId as string) } : {};
+    
+    const conversations = await Conversation.find(query).sort({ 'metadata.created': -1 });
     res.json(conversations);
   } catch (error) {
     console.error('Error fetching conversations:', error);
@@ -191,7 +195,73 @@ const generateConversationSummary = async (messages: IMessage[]): Promise<string
 // Create new conversation
 router.post('/', async (req, res) => {
   try {
-    const tempUserId = new Types.ObjectId();
+    const { userId, agentId, isCallSimulator } = req.body;
+    
+    // For call simulator, use demo agent
+    if (isCallSimulator) {
+      const systemMessage = {
+        role: 'system',
+        content: demoAgent.systemPrompt,
+        timestamp: new Date()
+      };
+
+      const welcomeMessage = {
+        role: 'assistant',
+        content: demoAgent.greeting,
+        timestamp: new Date()
+      };
+
+      // Generate welcome message audio
+      const speech = await openai.audio.speech.create({
+        model: "tts-1",
+        voice: demoAgent.voiceId,
+        input: welcomeMessage.content
+      });
+
+      // Save audio file
+      const audioFileName = `welcome-${Date.now()}.mp3`;
+      const audioPath = path.join(__dirname, '../../public/audio', audioFileName);
+      const audioBuffer = Buffer.from(await speech.arrayBuffer());
+      await fs.promises.writeFile(audioPath, audioBuffer);
+
+      // Add audio URL to welcome message
+      const welcomeMessageWithAudio = {
+        ...welcomeMessage,
+        audioUrl: `/audio/${audioFileName}`
+      };
+
+      const conversation = await Conversation.create({
+        userId,
+        title: `Demo Call with ${demoAgent.name} - ${new Date().toLocaleDateString()}`,
+        messages: [systemMessage, welcomeMessageWithAudio],
+        metadata: {
+          duration: 0,
+          sentiment: 'neutral',
+          intents: [],
+          created: new Date(),
+          updated: new Date()
+        }
+      });
+
+      // Only send the welcome message to the client
+      const responseData = {
+        ...conversation.toObject(),
+        messages: [welcomeMessageWithAudio],
+        demoAgent: {
+          name: demoAgent.name,
+          company: demoAgent.company,
+          personality: demoAgent.personality
+        }
+      };
+
+      return res.status(201).json(responseData);
+    }
+
+    // Regular agent conversation creation (existing code)
+    if (!userId || !agentId) {
+      return res.status(400).json({ error: 'userId and agentId are required' });
+    }
+
     const personality = getRandomPersonality();
     
     const systemMessage = {
@@ -249,7 +319,8 @@ Maintain a natural flow of conversation as if chatting with a friend while being
     };
 
     const conversation = await Conversation.create({
-      userId: tempUserId,
+      userId,
+      agentId,
       title: req.body.title || `Chat from ${new Date().toLocaleDateString()}`,
       messages: [systemMessage, welcomeMessage],
       metadata: {
@@ -612,6 +683,66 @@ router.get('/stats/user/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error fetching user stats:', error);
     res.status(500).json({ error: 'Failed to fetch user stats' });
+  }
+});
+
+// Helper function to generate conversation title
+async function generateConversationTitle(messages: any[]) {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `Generate a concise, descriptive title for this customer service conversation. The title should:
+1. Focus on the main issue or resolution (e.g., "Password Reset Assistance", "Refund Request Processed")
+2. Be specific but brief (3-6 words)
+3. Use action-oriented words when applicable (Resolved, Processed, Updated, etc.)
+4. Include the service/product type if relevant
+5. Capture the outcome if the issue was resolved
+
+Examples:
+- "Account Access Issue Resolved"
+- "Shipping Delay Compensation Provided"
+- "Product Return Label Generated"
+- "Subscription Cancellation Processed"
+- "Payment Method Update Completed"`
+        },
+        {
+          role: "user",
+          content: `Please generate a title for this conversation:\n\n${messages.map(m => `${m.role}: ${m.content}`).join('\n')}`
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 60
+    });
+
+    return completion.choices[0]?.message?.content || 'Customer Service Conversation';
+  } catch (error) {
+    console.error('Error generating title:', error);
+    return 'Customer Service Conversation';
+  }
+}
+
+// Update conversation route to include title generation
+router.put('/:id/end', async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Generate title based on conversation content
+    const title = await generateConversationTitle(conversation.messages);
+    
+    // Update conversation with generated title
+    conversation.title = title;
+    await conversation.save();
+
+    res.json({ title });
+  } catch (error) {
+    console.error('Error ending conversation:', error);
+    res.status(500).json({ error: 'Failed to end conversation' });
   }
 });
 

@@ -76,11 +76,10 @@ const Conversations: React.FC = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold gradient-text animate-fadeIn">Conversation History</h1>
           <button
-            onClick={() => navigate('/call')}
-            className="px-6 py-3 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 backdrop-blur-xl border border-white/20 animate-fadeIn"
+            onClick={() => navigate('/call-simulator')}
+            className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-300"
           >
-            <PhoneIcon className="h-5 w-5" />
-            <span>New Call</span>
+            Start New Call
           </button>
         </div>
 
@@ -94,11 +93,13 @@ const Conversations: React.FC = () => {
             <h2 className="text-2xl font-semibold mb-4">No conversations yet</h2>
             <p className="text-gray-400 mb-8">Start a new call to begin your first conversation</p>
             <button
-              onClick={() => navigate('/call')}
-              className="px-6 py-3 bg-blue-500/80 hover:bg-blue-600/80 text-white rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 mx-auto backdrop-blur-xl border border-white/20"
+              onClick={() => navigate('/call-simulator')}
+              className="px-6 py-3 text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2"
             >
-              <PhoneIcon className="h-5 w-5" />
               <span>Start New Call</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
             </button>
           </div>
         ) : (

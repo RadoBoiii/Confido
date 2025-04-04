@@ -8,22 +8,32 @@ export interface IUserRequest extends Request {
 
 export const auth = async (req: IUserRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.header('Authorization');
+    console.log('Auth Header:', authHeader);
+    
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Token:', token);
     
     if (!token) {
-      throw new Error();
+      console.log('No token provided');
+      throw new Error('No token provided');
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findOne({ _id: (decoded as any)._id });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userId: string };
+    console.log('Decoded token:', decoded);
+    
+    const user = await User.findById(decoded.userId);
+    console.log('Found user:', user?._id);
     
     if (!user) {
-      throw new Error();
+      console.log('User not found');
+      throw new Error('User not found');
     }
     
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth error:', error);
     res.status(401).json({ message: 'Please authenticate.' });
   }
 }; 

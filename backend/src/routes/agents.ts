@@ -8,10 +8,10 @@ const router = express.Router();
 router.get('/', auth, async (req: IUserRequest, res) => {
   try {
     const agents = await Agent.find({ userId: req.user._id });
-    res.json(agents);
+    return res.json(agents);
   } catch (error) {
     console.error('Error fetching agents:', error);
-    res.status(500).json({ message: 'Server error while fetching agents' });
+    return res.status(500).json({ message: 'Server error while fetching agents' });
   }
 });
 
@@ -27,10 +27,10 @@ router.get('/:id', auth, async (req: IUserRequest, res) => {
       return res.status(404).json({ message: 'Agent not found' });
     }
 
-    res.json(agent);
+    return res.json(agent);
   } catch (error) {
     console.error('Error fetching agent:', error);
-    res.status(500).json({ message: 'Server error while fetching agent' });
+    return res.status(500).json({ message: 'Server error while fetching agent' });
   }
 });
 
@@ -57,13 +57,13 @@ router.post('/', auth, async (req: IUserRequest, res) => {
     });
 
     console.log('Created agent:', agent);
-    res.status(201).json(agent);
+    return res.status(201).json(agent);
   } catch (error) {
     console.error('Detailed error creating agent:', error);
     if (error instanceof Error) {
-      res.status(500).json({ message: `Error creating agent: ${error.message}` });
+      return res.status(500).json({ message: `Error creating agent: ${error.message}` });
     } else {
-      res.status(500).json({ message: 'Server error while creating agent' });
+      return res.status(500).json({ message: 'Server error while creating agent' });
     }
   }
 });
@@ -92,10 +92,10 @@ router.put('/:id', auth, async (req: IUserRequest, res) => {
       return res.status(404).json({ message: 'Agent not found' });
     }
 
-    res.json(agent);
+    return res.json(agent);
   } catch (error) {
     console.error('Error updating agent:', error);
-    res.status(500).json({ message: 'Server error while updating agent' });
+    return res.status(500).json({ message: 'Server error while updating agent' });
   }
 });
 
@@ -111,10 +111,10 @@ router.delete('/:id', auth, async (req: IUserRequest, res) => {
       return res.status(404).json({ message: 'Agent not found' });
     }
 
-    res.json({ message: 'Agent deleted successfully' });
+    return res.json({ message: 'Agent deleted successfully' });
   } catch (error) {
     console.error('Error deleting agent:', error);
-    res.status(500).json({ message: 'Server error while deleting agent' });
+    return res.status(500).json({ message: 'Server error while deleting agent' });
   }
 });
 

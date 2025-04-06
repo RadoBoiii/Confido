@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       token,
       user: {
         _id: user._id,
@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    return res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
@@ -68,7 +68,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    res.json({
+    return res.json({
       token,
       user: {
         _id: user._id,
@@ -79,7 +79,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    return res.status(500).json({ message: 'Server error during login' });
   }
 });
 
@@ -98,7 +98,7 @@ router.get('/me', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({
+    return res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
@@ -106,7 +106,7 @@ router.get('/me', async (req, res) => {
     });
   } catch (error) {
     console.error('Get user error:', error);
-    res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid token' });
   }
 });
 

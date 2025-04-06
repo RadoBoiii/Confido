@@ -317,7 +317,7 @@ export const processMessage = async (
 };
 
 const extractIntents = (text: string): string[] => {
-  const intents = [];
+  const intents: string[] = [];
   
   if (/\b(how|what|where|when|why|who)\b/i.test(text)) {
     intents.push('question');

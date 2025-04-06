@@ -19,6 +19,7 @@ import { demoAgent } from './config/demoAgent';
 import conversationRoutes from './routes/conversations';
 import authRoutes from './routes/auth';
 import agentRoutes from './routes/agents';
+import livekitRoutes from './routes/livekit';
 
 const app = express();
 const server = http.createServer(app);
@@ -49,6 +50,7 @@ app.use('/audio', express.static(path.join(__dirname, '..', 'public', 'audio')))
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
+app.use('/api/livekit', livekitRoutes);
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -68,7 +70,7 @@ const connectWithRetry = () => {
   const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/conversai';
   console.log('Attempting MongoDB connection to:', mongoUri);
   
-  mongoose.connect(mongoUri)
+  mongoose.connect(mongoUri, mongooseOptions)
     .then(() => {
       console.log('Successfully connected to MongoDB');
     })

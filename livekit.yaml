@@ -1,0 +1,7 @@
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 7882
+  port_range_end: 7882
+keys:
+  APIUtvHGhQn4GgD: 0oCRUe5z9vJfb69vCfgDuewi9CnPz48eZpzleELDduzG 

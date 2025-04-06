@@ -13,7 +13,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-black/30 backdrop-blur-lg border-b border-white/10">
+    <nav className="bg-gray-900/95 backdrop-blur-lg border-b border-white/10 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
@@ -52,6 +52,16 @@ const Navbar: React.FC = () => {
                 } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
               >
                 Agents
+              </Link>
+              <Link
+                to="/live-call"
+                className={`${
+                  location.pathname.startsWith('/live-call')
+                    ? 'text-blue-400 border-blue-500'
+                    : 'text-white/70 hover:text-white border-transparent hover:border-white/20'
+                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
+              >
+                Live Call
               </Link>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import express, { Request } from 'express';
+import express from 'express';
 import multer from 'multer';
 import OpenAI from 'openai';
 import Conversation, { IMessage } from '../models/conversation';
@@ -28,10 +28,10 @@ if (!fs.existsSync(audioDir)) {
 
 // Configure multer for audio uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (_req, _file, cb) => {
     cb(null, audioDir);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
@@ -152,10 +152,10 @@ router.get('/:id', async (req, res) => {
     };
 
     console.log('Sending conversation response:', response); // Debug log
-    res.json(response);
+    return res.json(response);
   } catch (error) {
     console.error('Error fetching conversation:', error);
-    res.status(500).json({ error: 'Failed to fetch conversation' });
+    return res.status(500).json({ error: 'Failed to fetch conversation' });
   }
 });
 
@@ -166,31 +166,28 @@ const detectCompanyFromMessages = (messages: IMessage[]): string => {
   return companies.find(company => messageText.includes(company)) || 'general';
 };
 
-// Helper function to generate conversation summary
-const generateConversationSummary = async (messages: IMessage[]): Promise<string> => {
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "Generate a brief 1-2 sentence summary of the conversation context. Focus on the main issue or topic being discussed."
-        },
-        {
-          role: "user",
-          content: messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 100
-    });
-
-    return completion.choices[0]?.message?.content || "Previous conversation context not available.";
-  } catch (error) {
-    console.error('Error generating conversation summary:', error);
-    return "Previous conversation context not available.";
-  }
-};
+// Comment out unused function
+// const generateConversationSummary = async (messages: IMessage[]): Promise<string> => {
+//   try {
+//     const completion = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         {
+//           role: "system",
+//           content: "Summarize the following conversation in 2-3 sentences."
+//         },
+//         {
+//           role: "user",
+//           content: messages.map(m => `${m.role}: ${m.content}`).join('\n')
+//         }
+//       ]
+//     });
+//     return completion.choices[0]?.message?.content || "No summary available";
+//   } catch (error) {
+//     console.error('Error generating conversation summary:', error);
+//     return "Error generating summary";
+//   }
+// };
 
 // Create new conversation
 router.post('/', async (req, res) => {
@@ -338,10 +335,10 @@ Maintain a natural flow of conversation as if chatting with a friend while being
       messages: [welcomeMessage]
     };
 
-    res.status(201).json(responseData);
+    return res.status(201).json(responseData);
   } catch (error) {
     console.error('Error creating conversation:', error);
-    res.status(500).json({ error: 'Failed to create conversation' });
+    return res.status(500).json({ error: 'Failed to create conversation' });
   }
 });
 
@@ -363,10 +360,10 @@ router.delete('/:id', async (req, res) => {
       }
     });
 
-    res.json({ message: 'Conversation deleted successfully' });
+    return res.status(200).json({ message: 'Conversation deleted successfully' });
   } catch (error) {
     console.error('Error deleting conversation:', error);
-    res.status(500).json({ error: 'Failed to delete conversation' });
+    return res.status(500).json({ error: 'Failed to delete conversation' });
   }
 });
 
@@ -435,14 +432,10 @@ For example, instead of "You'll need to contact our support team", say "I can he
 
     await conversation.save();
 
-    res.json({
-      message: 'Audio message processed successfully',
-      aiResponse,
-      audioUrl
-    });
+    return res.status(200).json({ audioUrl });
   } catch (error) {
-    console.error('Error processing audio message:', error);
-    res.status(500).json({ error: 'Failed to process audio message' });
+    console.error('Error uploading audio:', error);
+    return res.status(500).json({ error: 'Failed to upload audio' });
   }
 });
 
@@ -453,10 +446,11 @@ router.get('/:id/messages', async (req, res) => {
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
-    res.json(conversation.messages);
+    const messages = conversation.messages;
+    return res.json(messages);
   } catch (error) {
-    console.error('Error getting messages:', error);
-    res.status(500).json({ message: 'Error getting messages' });
+    console.error('Error fetching messages:', error);
+    return res.status(500).json({ error: 'Failed to fetch messages' });
   }
 });
 
@@ -615,15 +609,16 @@ Example formats:
         : aiMessage.timestamp
     };
 
-    res.json({
-      message: responseMessage,
-      audioUrl,
+    const message = {
+      ...responseMessage,
       title: conversation.title
-    });
+    };
+
+    return res.status(201).json(message);
 
   } catch (error) {
-    console.error('Error handling message:', error);
-    res.status(500).json({ error: 'Failed to process message' });
+    console.error('Error adding message:', error);
+    return res.status(500).json({ error: 'Failed to add message' });
   }
 });
 
@@ -739,10 +734,10 @@ router.put('/:id/end', async (req, res) => {
     conversation.title = title;
     await conversation.save();
 
-    res.json({ title });
+    return res.json(conversation);
   } catch (error) {
     console.error('Error ending conversation:', error);
-    res.status(500).json({ error: 'Failed to end conversation' });
+    return res.status(500).json({ error: 'Failed to end conversation' });
   }
 });
 

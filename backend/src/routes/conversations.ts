@@ -227,9 +227,12 @@ router.post('/', async (req, res) => {
         audioUrl: `/audio/${audioFileName}`
       };
 
+      // Generate a descriptive title for the demo call
+      const initialTitle = await generateConversationTitle([systemMessage, welcomeMessageWithAudio]);
+
       const conversation = await Conversation.create({
         userId,
-        title: `Demo Call with ${demoAgent.name} - ${new Date().toLocaleDateString()}`,
+        title: initialTitle,
         messages: [systemMessage, welcomeMessageWithAudio],
         metadata: {
           duration: 0,
@@ -521,6 +524,12 @@ router.post('/:conversationId/messages', async (req, res) => {
     // Only analyze sentiment after adding a user message
     if (role === 'user') {
       conversation.metadata.sentiment = await analyzeSentiment(conversation.messages);
+      
+      // Update the title after every few user messages to reflect the conversation topic
+      if (conversation.messages.filter(msg => msg.role === 'user').length % 3 === 0) {
+        const updatedTitle = await generateConversationTitle(conversation.messages);
+        conversation.title = updatedTitle;
+      }
     }
 
     // Update conversation duration and timestamp
@@ -738,6 +747,32 @@ router.put('/:id/end', async (req, res) => {
   } catch (error) {
     console.error('Error ending conversation:', error);
     return res.status(500).json({ error: 'Failed to end conversation' });
+  }
+});
+
+// Update conversation title based on content
+router.put('/:id/update-title', async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Generate title based on conversation content
+    const title = await generateConversationTitle(conversation.messages);
+    
+    // Update conversation with generated title
+    conversation.title = title;
+    await conversation.save();
+
+    return res.json({ 
+      success: true, 
+      title: conversation.title,
+      message: 'Conversation title updated successfully' 
+    });
+  } catch (error) {
+    console.error('Error updating conversation title:', error);
+    return res.status(500).json({ error: 'Failed to update conversation title' });
   }
 });
 

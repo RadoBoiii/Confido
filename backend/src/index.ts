@@ -257,12 +257,44 @@ io.on('connection', (socket) => {
       // Add audio URL to welcome message
       welcomeMessage.audioUrl = `/audio/${audioFileName}`;
 
+      // Generate a descriptive title for the demo call
+      let conversationTitle;
+      if (isCallSimulator) {
+        // For demo calls, generate a title based on the conversation content
+        const titleResponse = await openai.chat.completions.create({
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: `Generate a short, descriptive title for this demo call conversation. The title should:
+1. Be concise (3-6 words)
+2. Capture the main topic or issue
+3. Be written in title case
+4. Focus on the purpose of the demo call
+
+Example formats:
+- "Product Demo Overview"
+- "Service Features Walkthrough"
+- "Technical Support Demo"
+- "Customer Service Simulation"`
+            },
+            {
+              role: "user",
+              content: `System message: ${systemMessage.content}\n\nWelcome message: ${welcomeMessage.content}`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 60
+        });
+        conversationTitle = titleResponse.choices[0]?.message?.content || "Demo Call";
+      } else {
+        conversationTitle = `Chat with ${data.agentInfo?.name} at ${new Date().toLocaleDateString()}`;
+      }
+
       // Create conversation with conditional agentId
       const conversationData: any = {
         userId,
-        title: isCallSimulator ? 
-          `Demo Call with ${demoAgent.name} - ${new Date().toLocaleDateString()}` :
-          `Chat with ${data.agentInfo?.name} at ${new Date().toLocaleDateString()}`,
+        title: conversationTitle,
         messages: [systemMessage, welcomeMessage],
         metadata: {
           duration: 0,

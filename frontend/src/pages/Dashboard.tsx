@@ -179,10 +179,10 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="ml-3">
                 <h3 className="text-lg font-medium text-white mb-2">
-                  Ready to start practicing?
+                  Ready to try out ConversAI?
                 </h3>
                 <p className="text-white/70">
-                  Choose a company to practice with and start improving your conversation skills today. The AI will provide real-time feedback and guidance throughout your practice sessions.
+                  Test out a conversation with Alex, our customer service representative. Use ConversAI to build your own agent for your organization
                 </p>
               </div>
             </div>

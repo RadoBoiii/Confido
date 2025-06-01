@@ -1,6 +1,10 @@
-# ConversAI - AI-Powered Conversation Simulator
+# Nursa AI - AI-Powered Front Desk Voice Agent
 
 A full-stack application that simulates AI-powered conversations with company-specific support agents.
+
+### VIDEO
+Video 1 - https://www.loom.com/share/86df6cd95596423595eb441b809f4967?sid=587ad28a-61b1-4ad8-a2c2-48c84b54b235. 
+Video 2 - https://www.loom.com/share/e1110a92663e4b42bba38b8d3b4d5f5c?sid=51f77f49-ce4c-49f7-bc25-71b1d4198990  
 
 ## Prerequisites
 
@@ -25,7 +29,7 @@ ps aux | grep mongod
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd ConversAI
+cd Confido
 
 # Install backend dependencies
 cd backend
@@ -41,7 +45,7 @@ npm install
 #### Backend (.env)
 Create a `.env` file in the backend directory with:
 ```
-MONGODB_URI=mongodb://localhost:27017/conversai
+MONGODB_URI=mongodb://localhost:27017/nursa
 PORT=5001
 FRONTEND_URL=http://localhost:3000
 OPENAI_API_KEY=your_openai_api_key
@@ -139,7 +143,7 @@ ConversAI/
 ## Features
 
 - Real-time conversation simulation
-- Company-specific AI agents (Netflix, Amazon, Pizza Hut, Apple)
+- Buil your own agent for your clinic
 - Audio message support
 - Sentiment analysis
 - Automatic conversation titling

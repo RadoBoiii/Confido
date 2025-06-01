@@ -23,7 +23,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/company-agents', companyAgentRoutes);
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/conversai')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nursa')
   .then(() => {
     console.log('Connected to MongoDB');
   })

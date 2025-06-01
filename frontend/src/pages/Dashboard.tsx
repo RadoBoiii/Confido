@@ -179,10 +179,10 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="ml-3">
                 <h3 className="text-lg font-medium text-white mb-2">
-                  Ready to try out ConversAI?
+                  Ready to try out Nursa?
                 </h3>
                 <p className="text-white/70">
-                  Test out a conversation with Alex, our customer service representative. Use ConversAI to build your own agent for your organization
+                  Test out a conversation with Nursa, our customer service representative. Use Confido Healthcare Agent to build your own agent for your medical center
                 </p>
               </div>
             </div>

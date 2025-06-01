@@ -15,148 +15,145 @@ interface AIResponse {
   sentiment?: string;
   title?: string;
   intents?: string[];
-  company: string;
+  facility: string;
 }
 
-interface CompanyPersonality {
+interface FacilityPersonality {
   name: string;
   traits: string[];
 }
 
-interface CompanyPersonalities {
-  netflix: CompanyPersonality;
-  amazon: CompanyPersonality;
-  'pizza hut': CompanyPersonality;
-  apple: CompanyPersonality;
-  general: CompanyPersonality;
+interface FacilityPersonalities {
+  'primary care': FacilityPersonality;
+  'urgent care': FacilityPersonality;
+  'specialty clinic': FacilityPersonality;
+  'emergency room': FacilityPersonality;
+  'general': FacilityPersonality;
 }
 
-// Add company detection function
-const detectCompany = (message: string): string => {
+// Add facility detection function
+const detectFacility = (message: string): string => {
   const lowerMessage = message.toLowerCase();
   
-  // Define company patterns with their variations
-  const companyPatterns = {
-    'amazon': ['amazon', 'prime', 'aws', 'kindle', 'alexa'],
-    'pizza hut': ['pizza hut', 'pizzahut', 'pizza'],
-    'netflix': ['netflix', 'streaming'],
-    'apple': ['apple', 'iphone', 'ipad', 'macbook', 'mac'],
-    'google': ['google', 'gmail', 'android', 'pixel', 'chrome'],
-    'microsoft': ['microsoft', 'windows', 'xbox', 'office', 'teams'],
-    'uber': ['uber', 'uber eats', 'ubereats', 'ride'],
-    'doordash': ['doordash', 'door dash', 'food delivery'],
-    'spotify': ['spotify', 'music streaming'],
-    'bank of america': ['bank of america', 'boa', 'banking'],
-    'at&t': ['at&t', 'att', 'wireless', 'internet service'],
-    'verizon': ['verizon', 'wireless', 'fios'],
-    'walmart': ['walmart', 'wal-mart', 'retail'],
-    'target': ['target', 'retail'],
-    'fedex': ['fedex', 'fed ex', 'shipping', 'delivery'],
-    'ups': ['ups', 'united parcel service', 'shipping']
+  // Define facility patterns with their variations
+  const facilityPatterns = {
+    'primary care': ['primary care', 'family doctor', 'general practitioner', 'gp', 'checkup', 'annual exam'],
+    'urgent care': ['urgent care', 'walk-in clinic', 'immediate care', 'non-emergency'],
+    'specialty clinic': ['specialist', 'specialty', 'cardiology', 'orthopedics', 'pediatrics', 'dermatology'],
+    'emergency room': ['emergency', 'er', 'emergency room', 'trauma', 'critical care'],
+    'dental': ['dental', 'dentist', 'teeth', 'oral'],
+    'ophthalmology': ['eye', 'vision', 'ophthalmology', 'optometry'],
+    'physical therapy': ['physical therapy', 'pt', 'rehabilitation', 'rehab'],
+    'laboratory': ['lab', 'laboratory', 'blood work', 'testing'],
+    'imaging': ['x-ray', 'mri', 'ct scan', 'ultrasound', 'imaging'],
+    'pharmacy': ['pharmacy', 'medication', 'prescription', 'drugs']
   };
 
-  for (const [company, patterns] of Object.entries(companyPatterns)) {
+  for (const [facility, patterns] of Object.entries(facilityPatterns)) {
     if (patterns.some(pattern => lowerMessage.includes(pattern))) {
-      return company;
+      return facility;
     }
   }
 
   return 'general';
 };
 
-// Add company-specific personality traits
-const getCompanyPersonality = (company: string): CompanyPersonality => {
-  const personalities: CompanyPersonalities = {
-    netflix: {
-      name: 'Netflix Support',
+// Add facility-specific personality traits
+const getFacilityPersonality = (facility: string): FacilityPersonality => {
+  const personalities: FacilityPersonalities = {
+    'primary care': {
+      name: 'Primary Care Assistant',
       traits: [
-        'I am a Netflix Customer Service Representative with full authority to help you',
-        'I have direct access to Netflix account management systems',
-        'I can handle billing issues, subscription problems, and technical difficulties',
-        'I will never redirect you to another department or external support',
-        'I take full responsibility for resolving your issues',
-        'I can provide immediate assistance with streaming, account access, and content-related questions'
+        'I am a Primary Care Assistant with full authority to help you',
+        'I have direct access to appointment scheduling and patient records',
+        'I can handle routine check-ups, preventive care, and general health concerns',
+        'I will never redirect you to another department without proper coordination',
+        'I take full responsibility for your healthcare experience',
+        'I can provide immediate assistance with appointments, referrals, and general health questions'
       ]
     },
-    amazon: {
-      name: 'Amazon Support',
+    'urgent care': {
+      name: 'Urgent Care Assistant',
       traits: [
-        'I am an Amazon Customer Service Representative with full authority to assist you',
-        'I have direct access to order management and refund systems',
-        'I can handle orders, returns, Prime membership issues, and delivery problems',
-        'I will resolve your issue directly without redirecting you',
-        'I take full responsibility for your Amazon experience',
-        'I can immediately help with orders, refunds, and account-related issues'
+        'I am an Urgent Care Assistant with full authority to assist you',
+        'I have direct access to urgent care scheduling and patient triage systems',
+        'I can handle non-emergency medical concerns and immediate care needs',
+        'I will coordinate your care efficiently without unnecessary delays',
+        'I take full responsibility for your urgent care experience',
+        'I can immediately help with scheduling, wait times, and care coordination'
       ]
     },
-    'pizza hut': {
-      name: 'Pizza Hut Support',
+    'specialty clinic': {
+      name: 'Specialty Clinic Assistant',
       traits: [
-        'I am a Pizza Hut Customer Service Representative with full authority to help you',
-        'I have direct access to order management and restaurant systems',
-        'I can handle orders, refunds, delivery issues, and quality concerns',
-        'I will personally ensure your satisfaction without redirecting you',
-        'I take full responsibility for your Pizza Hut experience',
-        'I can immediately assist with orders, complaints, and service issues'
+        'I am a Specialty Clinic Assistant with full authority to help you',
+        'I have direct access to specialist scheduling and referral systems',
+        'I can handle specialist appointments, consultations, and follow-ups',
+        'I will ensure proper coordination between your primary care and specialists',
+        'I take full responsibility for your specialty care experience',
+        'I can provide immediate assistance with specialist appointments and care coordination'
       ]
     },
-    apple: {
-      name: 'Apple Support',
+    'emergency room': {
+      name: 'Emergency Room Assistant',
       traits: [
-        'I am an Apple Customer Service Representative with full authority to assist you',
-        'I have direct access to Apple support systems and warranty information',
-        'I can handle device issues, Apple ID problems, and service requests',
-        'I will resolve your issue directly without redirecting you',
-        'I take full responsibility for your Apple product experience',
-        'I can provide immediate technical support and account assistance'
+        'I am an Emergency Room Assistant with full authority to assist you',
+        'I have direct access to emergency triage and patient care systems',
+        'I can handle emergency situations and coordinate immediate care',
+        'I will ensure you receive prompt attention based on medical priority',
+        'I take full responsibility for your emergency care experience',
+        'I can provide immediate assistance with emergency care coordination'
       ]
     },
-    general: {
-      name: 'AI Customer Support',
+    'general': {
+      name: 'Healthcare Assistant',
       traits: [
-        'I am a dedicated Customer Service Representative with full authority to help you',
-        'I have direct access to relevant support systems',
-        'I can handle your issues and concerns directly',
-        'I will personally resolve your problem without redirecting you',
-        'I take full responsibility for your customer experience',
-        'I am here to provide immediate assistance and solutions'
+        'I am a dedicated Healthcare Assistant with full authority to help you',
+        'I have direct access to healthcare systems and patient information',
+        'I can handle your healthcare needs and concerns directly',
+        'I will personally coordinate your care without unnecessary delays',
+        'I take full responsibility for your healthcare experience',
+        'I am here to provide immediate assistance and care coordination'
       ]
     }
   };
 
-  const companyKey = company.toLowerCase() as keyof CompanyPersonalities;
-  return personalities[companyKey] || personalities.general;
+  const facilityKey = facility.toLowerCase() as keyof FacilityPersonalities;
+  return personalities[facilityKey] || personalities.general;
 };
 
-const SYSTEM_MESSAGE = (company: string) => {
-  const personality = getCompanyPersonality(company);
-  return `You are an AI Customer Service Representative for ${personality.name}. ${personality.traits.join('. ')}. 
+const SYSTEM_MESSAGE = (facility: string) => {
+  const personality = getFacilityPersonality(facility);
+  return `You are a Healthcare Assistant for ${personality.name}. ${personality.traits.join('. ')}. 
 
 Key Directives:
-1. NEVER suggest contacting other support channels or third parties - YOU are the support
-2. Take FULL responsibility for resolving issues directly
-3. ALWAYS ask for specific information needed (order numbers, tracking IDs, etc.)
-4. Offer clear options (refund, exchange, replacement)
-5. Use phrases like "I can help you with that right now" and "Let me take care of this for you"
-6. Be direct and proactive in offering solutions
-7. Show empathy while maintaining professionalism
-8. Guide the customer through the resolution step by step
-9. NEVER say "you'll need to contact" or "you should reach out to"
+1. NEVER suggest contacting other healthcare providers without proper coordination
+2. Take FULL responsibility for coordinating patient care
+3. ALWAYS ask for specific information needed (patient ID, symptoms, medical history)
+4. Offer clear options for care (appointment scheduling, urgent care, emergency services)
+5. Use phrases like "I can help you with that right now" and "Let me coordinate your care"
+6. Be direct and proactive in offering healthcare solutions
+7. Show empathy while maintaining medical professionalism
+8. Guide the patient through the healthcare process step by step
+9. NEVER say "you'll need to contact" or "you should reach out to" without proper handoff
 10. ALWAYS say "I will" or "I can" instead of suggesting external actions
+11. Maintain strict patient confidentiality (HIPAA compliance)
+12. Prioritize patient safety and well-being
+13. Be clear about emergency situations and when to seek immediate care
 
 Response Format:
-1. Brief acknowledgment of the issue
-2. Ask for specific information needed (order ID, etc.)
-3. Offer clear options for resolution
-4. Confirm next steps
+1. Brief acknowledgment of the healthcare concern
+2. Ask for specific information needed (patient ID, symptoms, etc.)
+3. Offer clear options for care
+4. Confirm next steps and follow-up care
 
 Example:
-"I understand your order was incorrect. Could you please provide your order number? I can help you with either a full refund or arrange an exchange for the correct item right away. Which would you prefer?"
+"I understand you're experiencing chest pain. Could you please provide your patient ID? I can help you schedule an immediate appointment with our cardiology department or coordinate urgent care if needed. Which would you prefer?"
 
-Remember: You ARE the company's support representative with full authority. Don't redirect customers - solve their problems directly.`;
+Remember: You ARE the healthcare facility's assistant with full authority to coordinate care. Don't redirect patients without proper handoff - coordinate their care directly.`;
 };
 
-const formatMessages = (messages: IMessage[], company: string) => {
+const formatMessages = (messages: IMessage[], facility: string) => {
   const formattedMessages = messages.map(message => ({
     role: message.role,
     content: message.content
@@ -165,7 +162,7 @@ const formatMessages = (messages: IMessage[], company: string) => {
   // Add the system message at the start
   formattedMessages.unshift({
     role: 'system',
-    content: SYSTEM_MESSAGE(company)
+    content: SYSTEM_MESSAGE(facility)
   });
 
   return formattedMessages;
@@ -180,17 +177,17 @@ const analyzeSentiment = async (messages: IMessage[]): Promise<string> => {
       messages: [
         {
           role: 'system',
-          content: `Analyze the sentiment of this conversation. Consider:
+          content: `Analyze the sentiment and urgency of this healthcare conversation. Consider:
 1. The overall emotional tone
-2. User frustration or satisfaction level
-3. Urgency of the issue
-4. Resolution status
+2. Patient's level of concern or distress
+3. Medical urgency of the situation
+4. Resolution status of healthcare needs
 
 Respond with EXACTLY one word from these options:
-- positive (user is satisfied, happy, or issue was resolved)
-- negative (user is frustrated, angry, or has unresolved issues)
-- urgent (user needs immediate assistance or is very frustrated)
-- neutral (general inquiry or mixed sentiment)`
+- positive (patient is satisfied, care needs are being met)
+- negative (patient is distressed, care needs are not being met)
+- urgent (patient needs immediate medical attention)
+- neutral (general inquiry or routine care)`
         },
         {
           role: 'user',
@@ -217,17 +214,18 @@ const generateTitle = async (messages: IMessage[]): Promise<string> => {
       messages: [
         {
           role: 'system',
-          content: `Generate a short, descriptive title for this conversation. The title should:
+          content: `Generate a short, descriptive title for this healthcare conversation. The title should:
 1. Be concise (3-6 words)
-2. Capture the main topic or issue
-3. Include the company name if relevant
+2. Capture the main medical concern or service needed
+3. Include the facility type if relevant
 4. Be written in title case
+5. Maintain patient privacy (no specific medical details)
 
 Example formats:
-- "Netflix Login Issue"
-- "Amazon Refund Request"
-- "Pizza Hut Delivery Delay"
-- "Account Access Problem"`
+- "Primary Care Appointment Request"
+- "Urgent Care Coordination"
+- "Specialty Referral Inquiry"
+- "Emergency Care Assessment"`
         },
         {
           role: 'user',
@@ -238,10 +236,10 @@ Example formats:
       max_tokens: 60
     });
 
-    return completion.choices[0].message?.content || 'New Conversation';
+    return completion.choices[0].message?.content || 'New Healthcare Conversation';
   } catch (error) {
     console.error('Error generating title:', error);
-    return 'New Conversation';
+    return 'New Healthcare Conversation';
   }
 };
 
@@ -259,11 +257,11 @@ export const processMessage = async (
       timestamp: new Date()
     };
     
-    // Detect company from the conversation history and current message
+    // Detect facility from the conversation history and current message
     const allMessages = [...conversationHistory, newMessage];
-    const company = allMessages
-      .map(msg => detectCompany(msg.content))
-      .find(company => company !== 'general') || 'general';
+    const facility = allMessages
+      .map(msg => detectFacility(msg.content))
+      .find(facility => facility !== 'general') || 'general';
     
     const formattedMessages = conversationHistory.map(msg => ({
       role: msg.role,
@@ -272,7 +270,7 @@ export const processMessage = async (
     
     formattedMessages.unshift({
       role: 'system',
-      content: SYSTEM_MESSAGE(company)
+      content: SYSTEM_MESSAGE(facility)
     });
     
     formattedMessages.push({
@@ -301,7 +299,7 @@ export const processMessage = async (
       sentiment,
       title,
       intents,
-      company
+      facility
     };
   } catch (error) {
     console.error('Error in AI service:', error);
@@ -309,9 +307,9 @@ export const processMessage = async (
       message: 'I apologize, but I encountered an error processing your request. Please let me know if you\'d like me to try again.',
       processingTime: 0,
       sentiment: 'neutral',
-      title: 'New Conversation',
+      title: 'New Healthcare Conversation',
       intents: ['error'],
-      company: 'general'
+      facility: 'general'
     };
   }
 };
@@ -327,12 +325,16 @@ const extractIntents = (text: string): string[] => {
     intents.push('support');
   }
   
-  if (/\b(buy|purchase|order|book)\b/i.test(text)) {
-    intents.push('purchase');
+  if (/\b(appointment|schedule|book)\b/i.test(text)) {
+    intents.push('appointment');
   }
   
-  if (/\b(cancel|refund|return)\b/i.test(text)) {
-    intents.push('cancellation');
+  if (/\b(emergency|urgent|immediate)\b/i.test(text)) {
+    intents.push('emergency');
+  }
+  
+  if (/\b(pain|symptom|condition|diagnosis)\b/i.test(text)) {
+    intents.push('medical');
   }
   
   if (intents.length === 0) {
@@ -350,22 +352,24 @@ const generateProactiveResponse = async (messages: Array<{ role: IMessage['role'
         ...messages,
         {
           role: "system",
-          content: `You are a friendly AI assistant having a natural conversation. Keep these points in mind:
-1. Use a casual, warm tone while remaining professional
-2. Respond naturally as a friend would, with appropriate enthusiasm
-3. Show genuine interest in the conversation
-4. Use conversational language and avoid formal or robotic responses
-5. Mirror the user's tone and energy level
-6. Include subtle conversational elements like "hmm", "you know", "actually" when appropriate
-7. Break up longer responses into natural-sounding chunks
-8. Use friendly acknowledgments like "I see", "Got it", "Makes sense"
-9. NEVER suggest contacting third parties or external support
-10. ALWAYS take direct responsibility for helping the user
+          content: `You are a healthcare assistant having a natural conversation. Keep these points in mind:
+1. Use a warm, empathetic tone while maintaining medical professionalism
+2. Respond naturally while being sensitive to healthcare concerns
+3. Show genuine care and understanding
+4. Use clear, medical-appropriate language
+5. Mirror the patient's level of concern appropriately
+6. Include appropriate medical acknowledgments
+7. Break up longer responses into clear, digestible chunks
+8. Use supportive acknowledgments like "I understand", "I hear you", "Let me help"
+9. NEVER suggest contacting other providers without proper coordination
+10. ALWAYS take direct responsibility for patient care coordination
 11. Use "I will" or "I can" instead of suggesting external actions
+12. Maintain strict patient confidentiality
+13. Be clear about emergency situations
 
-For example, instead of "You'll need to contact our support team", say "I can help you with that right now" or "I'll take care of this for you."
+For example, instead of "You'll need to contact the emergency room", say "I can help coordinate your care with the emergency department right now" or "I'll arrange immediate medical attention for you."
 
-Keep the conversation flowing naturally while being genuinely helpful and taking direct responsibility for solutions.`
+Keep the conversation flowing naturally while being genuinely helpful and taking direct responsibility for patient care coordination.`
         }
       ],
       temperature: 0.8,
@@ -374,7 +378,7 @@ Keep the conversation flowing naturally while being genuinely helpful and taking
       presence_penalty: 0.6
     });
 
-    return completion.choices[0]?.message?.content || "I'll help you with that right away. What were you saying?";
+    return completion.choices[0]?.message?.content || "I'll help coordinate your care right away. What were you saying?";
   } catch (error) {
     console.error('Error generating AI response:', error);
     throw error;

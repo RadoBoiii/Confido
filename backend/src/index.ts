@@ -67,7 +67,7 @@ const mongooseOptions = {
 
 // Connect to MongoDB with retry logic
 const connectWithRetry = () => {
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/conversai';
+  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/nursa';
   console.log('Attempting MongoDB connection to:', mongoUri);
   
   mongoose.connect(mongoUri, mongooseOptions)

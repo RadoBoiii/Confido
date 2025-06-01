@@ -1,7 +1,7 @@
 {
-  "name": "conversai-backend",
+  "name": "nursa-backend",
   "version": "1.0.0",
-  "description": "Backend for ConversAI application",
+  "description": "Backend for Nursa application",
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",

@@ -39,7 +39,7 @@ const Register: React.FC = () => {
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white mb-2">Create Account</h2>
             <p className="text-white/70">
-              Join ConversAI to start practicing your conversation skills
+              Join Confido Healthcare Agent to start practicing your conversation skills
             </p>
           </div>
 

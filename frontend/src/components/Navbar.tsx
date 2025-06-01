@@ -19,7 +19,7 @@ const Navbar: React.FC = () => {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-xl font-bold text-white hover:text-blue-400 transition-colors">
-                ConversAI
+                Nursa AI
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -52,16 +52,6 @@ const Navbar: React.FC = () => {
                 } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
               >
                 Agents
-              </Link>
-              <Link
-                to="/live-call"
-                className={`${
-                  location.pathname.startsWith('/live-call')
-                    ? 'text-blue-400 border-blue-500'
-                    : 'text-white/70 hover:text-white border-transparent hover:border-white/20'
-                } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors`}
-              >
-                Live Call
               </Link>
             </div>
           </div>

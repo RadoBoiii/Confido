@@ -45,3 +45,4 @@ backend/public/audio/
 *.log
 .env*.local
 .qodo
+**/.env
